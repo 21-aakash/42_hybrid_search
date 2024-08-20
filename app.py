@@ -1,98 +1,108 @@
 import streamlit as st
 import os
-import nltk
 from pinecone import Pinecone, ServerlessSpec
 from langchain_community.retrievers import PineconeHybridSearchRetriever
-from pinecone_text.sparse import BM25Encoder
 from langchain_huggingface import HuggingFaceEmbeddings
+from pinecone_text.sparse import BM25Encoder
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file
+# Load environment variables
 load_dotenv()
 
-# Attempt to download the necessary NLTK resources
-try:
-    nltk.download('punkt', quiet=True)
-except Exception as e:
-    st.warning("Could not download NLTK resources. Ensure they are downloaded locally.")
-    st.stop()
+# Streamlit interface
+st.title("🌐 Pinecone Hybrid Search with Streamlit")
+st.subheader("Explore hybrid search across dense and sparse embeddings")
 
-# Set up Pinecone API key using os.getenv()
+# API keys and index details
 api_key = os.getenv("PINECONE_API_KEY")
+hf_token = os.getenv("HF_TOKEN")
 
-# Check if the API key is retrieved correctly
-if not api_key:
-    st.error("API key not found. Please set the PINECONE_API_KEY environment variable.")
-    st.stop()
-
-# Pinecone index name
 index_name = "hybrid-search-langchain-pinecone"
 
 # Initialize Pinecone client
-try:
-    pc = Pinecone(api_key=api_key)
-except Exception as e:
-    st.error(f"Failed to initialize Pinecone client: {e}")
-    st.stop()
+pc = Pinecone(api_key=api_key)
 
 # Create the index if it doesn't exist
-try:
-    if index_name not in pc.list_indexes().names():
-        pc.create_index(
-            name=index_name,
-            dimension=384,
-            metric="dotproduct",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-        )
-    index = pc.Index(index_name)
-except Exception as e:
-    st.error(f"Failed to create or access the Pinecone index: {e}")
-    st.stop()
+if index_name not in pc.list_indexes().names():
+    st.write("🔄 Creating Pinecone index...")
+    pc.create_index(
+        name=index_name,
+        dimension=384,  # dimensionality of dense model
+        metric="dotproduct",  # sparse values supported only for dotproduct
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+    )
+index = pc.Index(index_name)
 
-# Hugging Face Embeddings
+# Vector embedding and sparse matrix
+os.environ["HF_TOKEN"] = hf_token
+
+# Initialize embeddings
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# BM25 Encoder
-try:
-    bm25_encoder = BM25Encoder().default()
+# Initialize BM25 encoder
+bm25_encoder = BM25Encoder().default()
 
-    # Sample sentences
-    sentences = [
-        "In 2023, I visited Paris",
-        "In 2022, I visited New York",
-        "In 2021, I visited New Orleans",
-    ]
+# Example sentences
+sentences = [
+    "In 2023, I visited Paris",
+    "In 2022, I visited New York",
+    "In 2021, I visited New Orleans",
+]
 
-    # Fit the encoder on sentences
-    bm25_encoder.fit(sentences)
-    bm25_encoder.dump("bm25_values.json")
+# Fit BM25 encoder on sentences
+bm25_encoder.fit(sentences)
 
-    # Load the encoder values
-    bm25_encoder = BM25Encoder().load("bm25_values.json")
-except Exception as e:
-    st.error(f"Failed to encode or load BM25 values: {e}")
-    st.stop()
+# Store values to a JSON file
+bm25_encoder.dump("bm25_values.json")
 
-# Initialize Pinecone Hybrid Search Retriever
-try:
-    retriever = PineconeHybridSearchRetriever(
-        embeddings=embeddings,
-        sparse_encoder=bm25_encoder,
-        index=index
-    )
+# Load BM25 encoder
+bm25_encoder = BM25Encoder().load("bm25_values.json")
 
-    # Add texts to the retriever
-    retriever.add_texts(sentences)
-except Exception as e:
-    st.error(f"Failed to initialize the retriever or add texts: {e}")
-    st.stop()
+# Initialize retriever
+retriever = PineconeHybridSearchRetriever(embeddings=embeddings, sparse_encoder=bm25_encoder, index=index)
 
-# Streamlit input
-query = st.text_input("Enter your query:", "What city did I visit first?")
+# Add texts to the retriever
+st.write("🔄 Adding texts to the retriever...")
+retriever.add_texts(sentences)
 
-if query:
-    try:
-        result = retriever.invoke(query)
-        st.write(f"Result: {result}")
-    except Exception as e:
-        st.error(f"Failed to retrieve results: {e}")
+# Streamlit input for query
+query = st.text_input("🔍 Enter your query:", "What city did I visit first?")
+
+# Run the query and display the result
+if st.button("Search"):
+    st.write("🔍 Searching...")
+    results = retriever.invoke(query)
+
+    if results:
+        st.success("Result Found!")
+        st.markdown("### **Results:**")
+        
+        # Initialize a flag to check if a specific match is found
+        specific_match_found = False
+        
+        for res in results:
+            # Display only the sentence containing '2023' when queried
+            if "2023" in query and "2023" in res.page_content:
+                st.markdown(f"**Answer:** {res.page_content}")
+                specific_match_found = True
+                
+            elif "2021" in query and "2021" in res.page_content:
+                st.markdown(f"**Answer:** {res.page_content}")
+                specific_match_found = True
+                
+        
+        # If no specific match found, show all results
+        if not specific_match_found:
+            for i, res in enumerate(results, 1):
+                st.markdown(f"**{i}.** {res.page_content}")
+                st.markdown("---")
+    else:
+        st.warning("No results found for your query.")
+
+# Add a footer
+st.markdown(
+    """
+    ---
+    **Pinecone Hybrid Search** | Made by **Prachi**
+    """
+)
