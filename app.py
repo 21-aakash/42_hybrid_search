@@ -35,9 +35,9 @@ bm25_encoder = BM25Encoder().default()
 
 # Define sample sentences
 sentences = [
-    "In 2023, I visited Paris",
-    "In 2022, I visited New York",
-    "In 2021, I visited New Orleans",
+    "In 2023, I visited Mumbai",
+    "In 2022, I visited New Delhi",
+    "In 2021, I visited Pune",
 ]
 
 # Fit the BM25 encoder
