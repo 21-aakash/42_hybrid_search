@@ -5,3 +5,4 @@ langchain
 langchain-huggingface
 python-dotenv
 nltk
+langchain_community
