@@ -9,8 +9,22 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Streamlit interface
-st.title("🌐 Pinecone Hybrid Search with Streamlit")
+# Custom CSS for title font color
+st.markdown(
+    """
+    <style>
+    .title-font {
+        color: #39FF14; /* Neon green color */
+        font-size: 40px;
+        font-weight: bold;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Streamlit interface with custom title font color
+st.markdown('<p class="title-font">🌐 Pinecone Hybrid Search with Streamlit</p>', unsafe_allow_html=True)
 st.subheader("Explore hybrid search across dense and sparse embeddings")
 
 # API keys and index details
@@ -20,58 +34,73 @@ hf_token = os.getenv("HF_TOKEN")
 index_name = "hybrid-search-langchain-pinecone"
 
 # Initialize Pinecone client
-pc = Pinecone(api_key=api_key)
+try:
+    with st.spinner("Initializing Pinecone client..."):
+        pc = Pinecone(api_key=api_key)
+except Exception as e:
+    st.error(f"Error initializing Pinecone client: {e}")
+    st.stop()
 
 # Create the index if it doesn't exist
-if index_name not in pc.list_indexes().names():
-    st.write("🔄 Creating Pinecone index...")
-    pc.create_index(
-        name=index_name,
-        dimension=384,  # dimensionality of dense model
-        metric="dotproduct",  # sparse values supported only for dotproduct
-        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-    )
-index = pc.Index(index_name)
+try:
+    if index_name not in pc.list_indexes().names():
+        with st.spinner("Creating Pinecone index..."):
+            pc.create_index(
+                name=index_name,
+                dimension=384,  # dimensionality of dense model
+                metric="dotproduct",  # sparse values supported only for dotproduct
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+            )
+    index = pc.Index(index_name)
+except Exception as e:
+    st.error(f"Error creating or accessing the Pinecone index: {e}")
+    st.stop()
 
 # Vector embedding and sparse matrix
 os.environ["HF_TOKEN"] = hf_token
 
 # Initialize embeddings
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+with st.spinner("Initializing embeddings..."):
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # Initialize BM25 encoder
-bm25_encoder = BM25Encoder().default()
+with st.spinner("Initializing BM25 encoder..."):
+    bm25_encoder = BM25Encoder().default()
 
 # Example sentences
 sentences = [
-    "In 2023, I visited Paris",
-    "In 2022, I visited New York",
-    "In 2021, I visited New Orleans",
+    "In 2023, I visited Delhi",
+    "In 2022, I visited Mumbai",
+    "In 2021, I visited Pune",
 ]
 
 # Fit BM25 encoder on sentences
-bm25_encoder.fit(sentences)
+with st.spinner("Fitting BM25 encoder..."):
+    bm25_encoder.fit(sentences)
 
 # Store values to a JSON file
-bm25_encoder.dump("bm25_values.json")
+with st.spinner("Saving BM25 encoder values..."):
+    bm25_encoder.dump("bm25_values.json")
 
 # Load BM25 encoder
-bm25_encoder = BM25Encoder().load("bm25_values.json")
+with st.spinner("Loading BM25 encoder values..."):
+    bm25_encoder = BM25Encoder().load("bm25_values.json")
 
 # Initialize retriever
-retriever = PineconeHybridSearchRetriever(embeddings=embeddings, sparse_encoder=bm25_encoder, index=index)
+with st.spinner("Initializing retriever..."):
+    retriever = PineconeHybridSearchRetriever(embeddings=embeddings, sparse_encoder=bm25_encoder, index=index)
 
 # Add texts to the retriever
-st.write("🔄 Adding texts to the retriever...")
-retriever.add_texts(sentences)
+with st.spinner("Adding texts to the retriever..."):
+    retriever.add_texts(sentences)
 
 # Streamlit input for query
 query = st.text_input("🔍 Enter your query:", "What city did I visit first?")
 
 # Run the query and display the result
 if st.button("Search"):
-    st.write("🔍 Searching...")
-    results = retriever.invoke(query)
+    with st.spinner("Searching..."):
+        results = retriever.invoke(query)
 
     if results:
         st.success("Result Found!")
@@ -89,7 +118,6 @@ if st.button("Search"):
             elif "2021" in query and "2021" in res.page_content:
                 st.markdown(f"**Answer:** {res.page_content}")
                 specific_match_found = True
-                
         
         # If no specific match found, show all results
         if not specific_match_found:
@@ -103,6 +131,6 @@ if st.button("Search"):
 st.markdown(
     """
     ---
-    **Pinecone Hybrid Search** | Made by **Prachi**
+    **Pinecone Hybrid Search**
     """
 )
