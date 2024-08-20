@@ -24,7 +24,7 @@ st.markdown(
 )
 
 # Streamlit interface with custom title font color
-st.markdown('<p class="title-font">🌐 Pinecone Hybrid Search with Streamlit</p>', unsafe_allow_html=True)
+st.markdown('<p class="title-font">👽SkyChat 6.0.0 Pinecone Hybrid Search with Streamlit</p>', unsafe_allow_html=True)
 st.subheader("Explore hybrid search across dense and sparse embeddings")
 
 # API keys and index details
