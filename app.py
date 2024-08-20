@@ -5,6 +5,9 @@ from pinecone_text.sparse import BM25Encoder
 from langchain_huggingface import HuggingFaceEmbeddings
 import os
 import nltk
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 nltk.download('punkt_tab')
 # Initialize the Pinecone client
@@ -23,9 +26,6 @@ if index_name not in pc.list_indexes().names():
 
 index = pc.Index(index_name)
 
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
 
 os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
 
