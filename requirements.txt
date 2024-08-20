@@ -1,0 +1,7 @@
+streamlit
+pinecone-client
+pinecone-text
+langchain
+langchain-huggingface
+python-dotenv
+nltk
