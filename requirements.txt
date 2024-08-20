@@ -1,8 +1,7 @@
 streamlit
+nltk
 pinecone-client
+langchain-community
 pinecone-text
-langchain
 langchain-huggingface
 python-dotenv
-nltk
-langchain_community
