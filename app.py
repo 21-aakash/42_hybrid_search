@@ -5,10 +5,10 @@ from langchain_community.retrievers import PineconeHybridSearchRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from pinecone_text.sparse import BM25Encoder
 from dotenv import load_dotenv
-
+import nltk
 # Load environment variables
 load_dotenv()
-
+nltk.download('punkt_tab')
 # Custom CSS for title font color
 st.markdown(
     """
