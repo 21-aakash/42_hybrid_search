@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import nltk
 from pinecone import Pinecone, ServerlessSpec
 from langchain_community.retrievers import PineconeHybridSearchRetriever
 from pinecone_text.sparse import BM25Encoder
